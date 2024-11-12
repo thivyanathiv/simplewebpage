@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Form</title>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f7f8fa;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+      color: #333;
+    }
+
+    h1 {
+      font-size: 2rem;
+      text-align: center;
+      color: #4A90E2;
+      margin-bottom: 20px;
+    }
+
+    form {
+      background-color: #ffffff;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 500px; /* Reduced max width for better design */
+      margin-bottom: 30px;
+    }
+
+    label {
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+      display: block;
+      color: #555;
+    }
+
+    input[type="text"],
+    input[type="email"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 18px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      transition: border-color 0.3s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="email"]:focus {
+      border-color: #4A90E2;
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #4A90E2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #357ABD;
+    }
+
+    #usersList {
+      margin-top: 20px;
+      width: 100%;
+      max-width: 600px; /* Adjusted for consistency */
+    }
+
+    .user-item {
+      background-color: #ffffff;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+
+    .user-item button {
+      background-color: #FF6347;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .user-item button:hover {
+      background-color: #FF4500;
+    }
+
+    .user-item button + button {
+      margin-left: 10px;
+    }
+
+    /* Additional styling for large screens to avoid stretching */
+    @media (min-width: 1024px) {
+      body {
+        padding: 10px;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+      }
+
+      form {
+        padding: 30px;
+      }
+
+      button {
+        font-size: 1.1rem;
+      }
+
+      .user-item button {
+        padding: 8px 14px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <h1>User Management</h1>
+
+  <form id="userForm">
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" required>
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" required>
+    <button type="submit">Add User</button>
+  </form>
+
+  <div id="usersList"></div> <!-- List of existing users with Edit and Delete buttons -->
+
+  <script>
+    // Fetch and display all users
+    async function fetchUsers() {
+      try {
+        const response = await fetch('/api/users');
+        const users = await response.json();
+
+        const usersList = document.getElementById('usersList');
+        usersList.innerHTML = ''; // Clear existing list
+        users.forEach(user => {
+          const userDiv = document.createElement('div');
+          userDiv.classList.add('user-item');
+          userDiv.innerHTML = `
+            <span><strong>${user.name}</strong> (${user.email})</span>
+            <div>
+              <button onclick="editUser('${user._id}', '${user.name}', '${user.email}')">Edit</button>
+              <button onclick="deleteUser('${user._id}')">Delete</button>
+            </div>
+          `;
+          usersList.appendChild(userDiv);
+        });
+      } catch (err) {
+        console.error('Error fetching users:', err);
+      }
+    }
+
+    // Add new user
+    document.getElementById('userForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+
+      const userId = document.getElementById('userForm').dataset.userId; // For updating a user
+      const method = userId ? 'PUT' : 'POST'; // Use PUT if updating, POST if adding
+
+      try {
+        const response = await fetch(userId ? `/api/users/${userId}` : '/api/users', {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, email }),
+        });
+
+        const responseData = await response.json();
+        console.log(responseData);
+
+        if (response.ok) {
+          alert(userId ? 'User updated successfully' : 'User added successfully');
+          document.getElementById('userForm').reset();
+          delete document.getElementById('userForm').dataset.userId; // Remove userId after submission
+          fetchUsers(); // Reload the user list
+        } else {
+          alert('Error: ' + responseData.message);
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        alert('An error occurred');
+      }
+    });
+
+    // Edit user
+    function editUser(id, name, email) {
+      document.getElementById('name').value = name;
+      document.getElementById('email').value = email;
+      document.getElementById('userForm').dataset.userId = id; // Store userId for updating
+      document.querySelector('button[type="submit"]').textContent = 'Update User'; // Change button text to 'Update'
+    }
+
+    // Delete user
+    async function deleteUser(id) {
+      const confirmDelete = confirm('Are you sure you want to delete this user?');
+      if (!confirmDelete) return;
+
+      try {
+        const response = await fetch(`/api/users/${id}`, {
+          method: 'DELETE',
+        });
+
+        const responseData = await response.json();
+        if (response.ok) {
+          alert('User deleted successfully');
+          fetchUsers(); // Reload the user list
+        } else {
+          alert('Error: ' + responseData.message);
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        alert('An error occurred while deleting the user.');
+      }
+    }
+
+    // Initial load of users
+    fetchUsers();
+  </script>
+</body>
+</html>
